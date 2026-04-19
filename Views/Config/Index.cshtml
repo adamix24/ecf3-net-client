@@ -1,0 +1,85 @@
+@model FacturasWeb.Models.Ecf3Settings
+@{
+    ViewData["Title"] = "Configuración";
+}
+
+<h2>Configuración</h2>
+
+@if (TempData["Mensaje"] != null)
+{
+    <div class="alert alert-success">@TempData["Mensaje"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item"><a class="nav-link active" href="@Url.Action("Index")">API</a></li>
+    <li class="nav-item"><a class="nav-link" href="@Url.Action("Secuencias")">Secuencias NCF</a></li>
+</ul>
+
+<form asp-action="Index" method="post" style="max-width:720px;">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="All" class="text-danger"></div>
+
+    <div class="mb-3">
+        <label asp-for="ApiUrl" class="form-label"></label>
+        <input asp-for="ApiUrl" class="form-control" />
+        <div class="form-text">
+            Pruebas: <code>https://test-demoxdemo24.ecf3.com/apix/api.php</code><br/>
+            Producción: <code>https://demoxdemo24.ecf3.com/apix/api.php</code>
+        </div>
+        <span asp-validation-for="ApiUrl" class="text-danger small"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Token" class="form-label"></label>
+        <input asp-for="Token" class="form-control font-monospace" />
+        <span asp-validation-for="Token" class="text-danger small"></span>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-4">
+            <label asp-for="TipoEcfPorDefecto" class="form-label"></label>
+            <select asp-for="TipoEcfPorDefecto" class="form-select">
+                <option value="31">31 – Crédito Fiscal</option>
+                <option value="32">32 – Consumo</option>
+                <option value="33">33 – Nota Débito</option>
+                <option value="34">34 – Nota Crédito</option>
+                <option value="41">41 – Compras</option>
+                <option value="43">43 – Gastos Menores</option>
+                <option value="44">44 – Régimen Especial</option>
+                <option value="45">45 – Gubernamental</option>
+                <option value="46">46 – Exportación</option>
+                <option value="47">47 – Pagos Exterior</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label asp-for="TipoPagoPorDefecto" class="form-label">Tipo pago</label>
+            <select asp-for="TipoPagoPorDefecto" class="form-select">
+                <option value="1">1 – Contado</option>
+                <option value="2">2 – Crédito</option>
+                <option value="3">3 – Gratuito</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label asp-for="FormaPagoPorDefecto" class="form-label">Forma pago</label>
+            <select asp-for="FormaPagoPorDefecto" class="form-select">
+                <option value="1">1 – Efectivo</option>
+                <option value="2">2 – Cheque/Transferencia</option>
+                <option value="3">3 – Débito</option>
+                <option value="4">4 – Crédito</option>
+                <option value="5">5 – Venta Crédito</option>
+                <option value="6">6 – Bono</option>
+                <option value="7">7 – Permuta</option>
+                <option value="8">8 – Otro</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Guardar</button>
+        <a asp-action="Probar" class="btn btn-outline-secondary">Probar conexión</a>
+    </div>
+</form>

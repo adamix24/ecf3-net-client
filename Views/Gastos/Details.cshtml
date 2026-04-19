@@ -1,0 +1,44 @@
+@model FacturasWeb.Services.Gasto
+@{
+    ViewData["Title"] = $"Gasto {Model.Id}";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Gasto #@Model.Id</h2>
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">← Volver al listado</a>
+</div>
+
+@if (TempData["Mensaje"] != null)
+{
+    <div class="alert alert-success">@TempData["Mensaje"]</div>
+}
+
+<partial name="_ApiLogModal" />
+
+
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-3"><strong>RNC proveedor:</strong> @Model.RncEmisor</div>
+            <div class="col-md-6"><strong>Razón social:</strong> @Model.RazonSocialEmisor</div>
+            <div class="col-md-3"><strong>Estado:</strong> <span class="badge bg-info">@Model.Estado</span></div>
+            <div class="col-md-3"><strong>NCF:</strong> <code>@Model.Ncf</code></div>
+            <div class="col-md-3"><strong>Tipo e-CF:</strong> @Model.TipoEcf</div>
+            <div class="col-md-3"><strong>Fecha emisión:</strong> @Model.FechaEmision</div>
+            <div class="col-md-3"><strong>Total:</strong> <span class="fs-5">@Model.Total.ToString("N2")</span></div>
+            @if (!string.IsNullOrEmpty(Model.Notas))
+            {
+                <div class="col-md-12"><strong>Notas:</strong> @Model.Notas</div>
+            }
+            <div class="col-md-12 text-muted small">Creado: @Model.CreadoEn</div>
+        </div>
+    </div>
+</div>
+
+<div class="d-flex gap-2">
+    <form asp-action="Eliminar" asp-route-id="@Model.Id" method="post" class="d-inline"
+          onsubmit="return confirm('¿Eliminar el gasto @Model.Id?');">
+        @Html.AntiForgeryToken()
+        <button type="submit" class="btn btn-outline-danger">Eliminar gasto</button>
+    </form>
+</div>

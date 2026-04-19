@@ -1,0 +1,88 @@
+@model FacturasWeb.Models.Factura
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <title>Factura @Model.Numero</title>
+    <style>
+        body { font-family: Arial, sans-serif; color: #222; margin: 30px; }
+        h1 { margin: 0 0 4px 0; }
+        .muted { color:#666; font-size: 12px; }
+        table { width:100%; border-collapse: collapse; margin-top: 16px; }
+        th, td { padding: 6px 8px; border-bottom: 1px solid #ddd; }
+        th { background: #f3f3f3; text-align: left; }
+        .right { text-align: right; }
+        .totales { width: 280px; margin-left: auto; margin-top: 12px; }
+        .totales td { border: none; padding: 2px 6px; }
+        .total-final { font-size: 16px; font-weight: bold; border-top: 2px solid #000; }
+        .cabecera { display:flex; justify-content: space-between; }
+        .botones { margin-bottom: 16px; }
+        @@media print { .botones { display:none; } body { margin: 10px; } }
+    </style>
+</head>
+<body>
+    <div class="botones">
+        <button onclick="window.print()">Imprimir</button>
+        <a href="@Url.Action("Index")">Volver</a>
+    </div>
+
+    <div class="cabecera">
+        <div>
+            <h1>FACTURA</h1>
+            <div class="muted">No. interno: @Model.Numero</div>
+            @if (Model.EstaFirmada)
+            {
+                <div><strong>NCF:</strong> <code>@Model.Ncf</code></div>
+                <div class="muted">Tipo e-CF: @Model.TipoEcf · @Model.EstadoDgii</div>
+            }
+            <div class="muted">Fecha: @Model.Fecha.ToString("yyyy-MM-dd")</div>
+        </div>
+        <div style="text-align:right;">
+            <strong>Cliente</strong><br />
+            @Model.Cliente<br />
+            @if (!string.IsNullOrWhiteSpace(Model.Rnc)) { <span>RNC: @Model.Rnc<br /></span> }
+            @Model.Direccion
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Descripción</th>
+                <th class="right" style="width:70px;">Cant.</th>
+                <th class="right" style="width:100px;">Precio</th>
+                <th class="right" style="width:60px;">ITBIS</th>
+                <th class="right" style="width:100px;">Subtotal</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var l in Model.Lineas)
+        {
+            <tr>
+                <td>@l.Descripcion</td>
+                <td class="right">@l.Cantidad.ToString("N2")</td>
+                <td class="right">@l.Precio.ToString("N2")</td>
+                <td class="right">@l.TasaItbis%</td>
+                <td class="right">@l.Subtotal.ToString("N2")</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+
+    <table class="totales">
+        <tr><td>Subtotal</td><td class="right">@Model.Subtotal.ToString("N2")</td></tr>
+        <tr><td>ITBIS</td><td class="right">@Model.Itbis.ToString("N2")</td></tr>
+        <tr class="total-final"><td>Total</td><td class="right">@Model.Total.ToString("N2")</td></tr>
+    </table>
+
+    @if (!string.IsNullOrWhiteSpace(Model.Notas))
+    {
+        <p class="muted" style="margin-top:20px;"><strong>Notas:</strong> @Model.Notas</p>
+    }
+
+    <script>window.addEventListener('load', () => { setTimeout(() => window.print(), 300); });</script>
+</body>
+</html>

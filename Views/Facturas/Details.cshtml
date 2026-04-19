@@ -1,0 +1,260 @@
+@model FacturasWeb.Models.Factura
+@using System.Text.Json
+@{
+    ViewData["Title"] = $"Factura {Model.Numero}";
+    var firmada = Model.EstaFirmada;
+    var logJson = TempData["FirmarLog"] as string;
+    List<FacturasWeb.Services.ApiLogEntry>? log = null;
+    if (!string.IsNullOrEmpty(logJson))
+    {
+        try { log = JsonSerializer.Deserialize<List<FacturasWeb.Services.ApiLogEntry>>(logJson); }
+        catch { }
+    }
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Factura @Model.Numero</h2>
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">← Volver al listado</a>
+</div>
+
+@if (TempData["Mensaje"] != null)
+{
+    <div class="alert alert-success d-flex justify-content-between align-items-center">
+        <span>@TempData["Mensaje"]</span>
+        @if (log != null && log.Count > 0)
+        {
+            <button type="button" class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#logModal">
+                Ver log de firma (@log.Count pasos)
+            </button>
+        }
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger d-flex justify-content-between align-items-center">
+        <span>@TempData["Error"]</span>
+        @if (log != null && log.Count > 0)
+        {
+            <button type="button" class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#logModal">
+                Ver log de firma (@log.Count pasos)
+            </button>
+        }
+    </div>
+}
+
+@if (Model.TipoEcf == "34" && !string.IsNullOrEmpty(Model.NcfReferencia))
+{
+    <div class="alert alert-warning">
+        <strong>Nota de crédito</strong> — referencia al NCF <code>@Model.NcfReferencia</code>
+        @if (!string.IsNullOrEmpty(Model.CodigoModificacion))
+        {
+            <span class="ms-2">· Código @Model.CodigoModificacion</span>
+        }
+    </div>
+}
+
+@if (firmada)
+{
+    <div class="card mb-3 border-success">
+        <div class="card-body">
+            <h5 class="card-title text-success mb-2">✔ @(Model.TipoEcf == "34" ? "Nota de crédito emitida" : "Factura firmada")</h5>
+            <div class="row">
+                <div class="col-md-3"><strong>NCF:</strong> <code>@Model.Ncf</code></div>
+                <div class="col-md-3"><strong>Estado DGII:</strong> <span class="badge bg-info">@Model.EstadoDgii</span></div>
+                <div class="col-md-3"><strong>Track ID:</strong> @Model.TrackId</div>
+                <div class="col-md-3"><strong>Ambiente:</strong> @Model.Ambiente</div>
+            </div>
+            @if (!string.IsNullOrEmpty(Model.MensajeDgii))
+            {
+                <div class="mt-2"><strong>Mensaje DGII:</strong> @Model.MensajeDgii</div>
+            }
+            @if (Model.FechaFirma.HasValue)
+            {
+                <div class="text-muted small">Firmada: @Model.FechaFirma.Value.ToString("yyyy-MM-dd HH:mm")</div>
+            }
+        </div>
+    </div>
+}
+
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-3"><strong>Fecha:</strong> @Model.Fecha.ToString("yyyy-MM-dd")</div>
+            <div class="col-md-3"><strong>Tipo e-CF:</strong> @Model.TipoEcf</div>
+            <div class="col-md-3"><strong>Tipo pago:</strong> @Model.TipoPago</div>
+            <div class="col-md-3"><strong>Forma pago:</strong> @Model.FormaPago</div>
+            <div class="col-md-6"><strong>Cliente:</strong> @Model.Cliente</div>
+            <div class="col-md-3">
+                <strong>RNC:</strong> @Model.Rnc
+                @if (Model.RncValidado)
+                {
+                    <span class="badge bg-success ms-1">✔ validado</span>
+                }
+            </div>
+            <div class="col-md-3"></div>
+            @if (!string.IsNullOrEmpty(Model.Direccion))
+            {
+                <div class="col-md-12"><strong>Dirección:</strong> @Model.Direccion</div>
+            }
+            @if (!string.IsNullOrEmpty(Model.Notas))
+            {
+                <div class="col-md-12"><strong>Notas:</strong> @Model.Notas</div>
+            }
+        </div>
+    </div>
+</div>
+
+<table class="table table-sm align-middle">
+    <thead>
+        <tr>
+            <th>Descripción</th>
+            <th class="text-end" style="width:100px;">Cant.</th>
+            <th class="text-end" style="width:110px;">Precio</th>
+            <th class="text-end" style="width:90px;">ITBIS %</th>
+            <th class="text-end" style="width:110px;">Subtotal</th>
+            <th class="text-end" style="width:110px;">ITBIS</th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var l in Model.Lineas)
+    {
+        <tr>
+            <td>@l.Descripcion</td>
+            <td class="text-end">@l.Cantidad.ToString("N2")</td>
+            <td class="text-end">@l.Precio.ToString("N2")</td>
+            <td class="text-end">@l.TasaItbis%</td>
+            <td class="text-end">@l.Subtotal.ToString("N2")</td>
+            <td class="text-end">@l.Itbis.ToString("N2")</td>
+        </tr>
+    }
+    </tbody>
+</table>
+
+<div class="card p-3 mb-3" style="max-width:320px;margin-left:auto;">
+    <div class="d-flex justify-content-between"><span>Subtotal:</span><strong>@Model.Subtotal.ToString("N2")</strong></div>
+    <div class="d-flex justify-content-between"><span>ITBIS:</span><strong>@Model.Itbis.ToString("N2")</strong></div>
+    <hr />
+    <div class="d-flex justify-content-between fs-5"><span>Total:</span><strong>@Model.Total.ToString("N2")</strong></div>
+</div>
+
+<div class="d-flex gap-2 flex-wrap">
+    <a asp-action="Print" asp-route-id="@Model.Id" target="_blank" class="btn btn-outline-primary">🖨 Imprimir</a>
+
+    @if (!firmada)
+    {
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-secondary">✎ Editar</a>
+        <form asp-action="Firmar" asp-route-id="@Model.Id" method="post" class="d-inline"
+              onsubmit="return confirm('¿Firmar y enviar a DGII? Una vez firmada no se podrá modificar.');">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-success">🔐 Firmar para DGII</button>
+        </form>
+    }
+    else
+    {
+        @if (!string.IsNullOrEmpty(Model.PdfUrl))
+        {
+            <a class="btn btn-outline-primary" href="@Model.PdfUrl" target="_blank">PDF DGII</a>
+        }
+        @if (!string.IsNullOrEmpty(Model.QrUrl))
+        {
+            <a class="btn btn-outline-secondary" href="@Model.QrUrl" target="_blank">QR</a>
+        }
+        <form asp-action="Validar" asp-route-id="@Model.Id" method="post" class="d-inline">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-outline-success">Validar contra DGII</button>
+        </form>
+        @if (Model.TipoEcf != "34")
+        {
+            <a asp-action="NotaCredito" asp-route-id="@Model.Id" class="btn btn-warning">📝 Emitir Nota de Crédito</a>
+        }
+    }
+    @if (log != null && log.Count > 0)
+    {
+        <button type="button" class="btn btn-outline-dark" data-bs-toggle="modal" data-bs-target="#logModal">
+            Ver log del API
+        </button>
+    }
+</div>
+
+@if (log != null && log.Count > 0)
+{
+    <div class="modal fade" id="logModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Log del API ECF3 — @log.Count paso(s)</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    @for (int i = 0; i < log.Count; i++)
+                    {
+                        var e = log[i];
+                        var payloadPretty = PrettyJson(e.RequestPayload ?? e.RequestBody);
+                        var responsePretty = PrettyJson(e.ResponseBody);
+                        var ok = e.StatusCode >= 200 && e.StatusCode < 300 && e.Error == null;
+                        <div class="card mb-3 border-@(ok ? "success" : "danger")">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span>
+                                    <strong>Paso @(i+1)</strong> —
+                                    <span class="badge bg-secondary">@e.Method</span>
+                                    <span class="badge bg-@(ok ? "success" : "danger")">HTTP @e.StatusCode</span>
+                                    <span class="text-muted small">@e.DurationMs ms · @e.Timestamp.ToString("HH:mm:ss.fff")</span>
+                                </span>
+                            </div>
+                            <div class="card-body">
+                                <dl class="row mb-2">
+                                    <dt class="col-sm-2">URL</dt>
+                                    <dd class="col-sm-10"><code class="small">@e.Url</code></dd>
+                                    <dt class="col-sm-2">Token</dt>
+                                    <dd class="col-sm-10"><code class="small">@e.Token</code></dd>
+                                    @if (!string.IsNullOrEmpty(e.Error))
+                                    {
+                                        <dt class="col-sm-2">Error</dt>
+                                        <dd class="col-sm-10 text-danger">@e.Error</dd>
+                                    }
+                                </dl>
+                                @if (!string.IsNullOrEmpty(payloadPretty))
+                                {
+                                    <div class="mb-2">
+                                        <strong class="small text-muted">Request (datax):</strong>
+                                        <pre class="bg-light p-2 mb-0 small" style="max-height:300px;overflow:auto;">@payloadPretty</pre>
+                                    </div>
+                                }
+                                @if (!string.IsNullOrEmpty(e.RequestBody) && e.RequestBody != e.RequestPayload)
+                                {
+                                    <div class="mb-2">
+                                        <strong class="small text-muted">Body enviado (form):</strong>
+                                        <pre class="bg-light p-2 mb-0 small" style="max-height:150px;overflow:auto;">@e.RequestBody</pre>
+                                    </div>
+                                }
+                                @if (!string.IsNullOrEmpty(responsePretty))
+                                {
+                                    <div>
+                                        <strong class="small text-muted">Response:</strong>
+                                        <pre class="bg-light p-2 mb-0 small" style="max-height:300px;overflow:auto;">@responsePretty</pre>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@functions {
+    string PrettyJson(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return "";
+        try
+        {
+            using var doc = JsonDocument.Parse(raw);
+            return JsonSerializer.Serialize(doc.RootElement, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch { return raw; }
+    }
+}

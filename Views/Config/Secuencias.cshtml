@@ -1,0 +1,111 @@
+@model List<FacturasWeb.Services.SecuenciaNcf>
+@{
+    ViewData["Title"] = "Secuencias NCF";
+}
+
+<h2>Secuencias NCF</h2>
+
+@if (TempData["Mensaje"] != null)
+{
+    <div class="alert alert-success">@TempData["Mensaje"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item"><a class="nav-link" href="@Url.Action("Index")">API</a></li>
+    <li class="nav-item"><a class="nav-link active" href="@Url.Action("Secuencias")">Secuencias NCF</a></li>
+</ul>
+
+<h4>Secuencias autorizadas</h4>
+@if (!Model.Any())
+{
+    <div class="alert alert-info">No hay secuencias configuradas (o el API no respondió).</div>
+}
+else
+{
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th>Tipo</th>
+                <th>Nombre</th>
+                <th>Serie</th>
+                <th>Desde</th>
+                <th>Hasta</th>
+                <th>Actual</th>
+                <th>Disponibles</th>
+                <th>Siguiente NCF</th>
+                <th>Estado</th>
+                <th>Vence</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var s in Model)
+        {
+            <tr>
+                <td>@s.TipoEcf</td>
+                <td>@s.Nombre</td>
+                <td>@s.Serie</td>
+                <td>@s.Desde</td>
+                <td>@s.Hasta</td>
+                <td>@s.Actual</td>
+                <td>@s.Disponibles</td>
+                <td><code>@s.SiguienteNcf</code></td>
+                <td>@s.Estado</td>
+                <td>@s.FechaVencimiento</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}
+
+<hr />
+
+<h4>Crear / actualizar secuencia</h4>
+<p class="text-muted small">Desactiva la secuencia actual del tipo indicado y crea una nueva con el rango.</p>
+
+<form asp-action="SecuenciaActualizar" method="post" style="max-width:720px;">
+    @Html.AntiForgeryToken()
+    <div class="row g-3 mb-3">
+        <div class="col-md-4">
+            <label class="form-label">Tipo e-CF</label>
+            <select name="TipoEcf" class="form-select" required>
+                <option value="31">31 – Crédito Fiscal</option>
+                <option value="32">32 – Consumo</option>
+                <option value="33">33 – Nota Débito</option>
+                <option value="34">34 – Nota Crédito</option>
+                <option value="41">41 – Compras</option>
+                <option value="43">43 – Gastos Menores</option>
+                <option value="44">44 – Régimen Especial</option>
+                <option value="45">45 – Gubernamental</option>
+                <option value="46">46 – Exportación</option>
+                <option value="47">47 – Pagos Exterior</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Serie</label>
+            <input type="text" name="Serie" value="E" class="form-control" />
+        </div>
+    </div>
+    <div class="row g-3 mb-3">
+        <div class="col-md-3">
+            <label class="form-label">Desde</label>
+            <input type="number" name="DesdeNum" value="1" min="1" class="form-control" required />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Hasta</label>
+            <input type="number" name="HastaNum" value="100" min="1" class="form-control" required />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Fecha autorización</label>
+            <input type="date" name="FechaAutorizacion" value="@DateTime.Today.ToString("yyyy-MM-dd")" class="form-control" required />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Fecha vencimiento</label>
+            <input type="date" name="FechaVencimiento" value="@DateTime.Today.AddYears(2).ToString("yyyy-MM-dd")" class="form-control" required />
+        </div>
+    </div>
+    <button type="submit" class="btn btn-primary">Guardar secuencia</button>
+</form>

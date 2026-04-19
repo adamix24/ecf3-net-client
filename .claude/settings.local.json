@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet *)",
+      "Bash(curl *)",
+      "Bash(kill %bd93q9bl1)",
+      "Bash(taskkill //F //IM dotnet.exe)",
+      "WebFetch(domain:demoxdemo24.ecf3.com)",
+      "Read(//tmp/**)",
+      "Bash(python *)",
+      "Bash(grep -oE 'alert-[a-z]+[^<]{0,200}' /tmp/details.html)",
+      "Bash(grep -oE '\\(RNC proveedor|Raz.n social|Total|NCF\\)[^<]{0,80}')"
+    ]
+  }
+}

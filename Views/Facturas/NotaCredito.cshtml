@@ -1,0 +1,196 @@
+@model FacturasWeb.Models.Factura
+@{
+    ViewData["Title"] = "Emitir Nota de Crédito";
+    var originalNcf = ViewBag.OriginalNcf as string ?? Model.NcfReferencia;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Emitir Nota de Crédito <small class="text-muted">(e-CF 34)</small></h2>
+    @if (ViewBag.OriginalId != null)
+    {
+        <a asp-action="Details" asp-route-id="@ViewBag.OriginalId" class="btn btn-outline-secondary btn-sm">← Volver a factura original</a>
+    }
+</div>
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<div class="card mb-3 border-info">
+    <div class="card-body">
+        <strong>Referencia al documento original:</strong>
+        <div>NCF: <code>@originalNcf</code>
+            @if (ViewBag.OriginalNumero != null)
+            {
+                <span class="text-muted">· Factura @ViewBag.OriginalNumero</span>
+            }
+        </div>
+    </div>
+</div>
+
+<form asp-action="NotaCreditoEmitir" method="post" id="frmNota">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="NcfReferencia" />
+    <input type="hidden" asp-for="TipoEcf" value="34" />
+    <input type="hidden" asp-for="Numero" />
+    <input type="hidden" asp-for="Fecha" />
+    <input type="hidden" asp-for="RncValidado" />
+    <input type="hidden" asp-for="RazonSocialValidada" />
+
+    <div asp-validation-summary="All" class="text-danger"></div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-4">
+            <label asp-for="CodigoModificacion" class="form-label">Código de modificación</label>
+            <select asp-for="CodigoModificacion" class="form-select" id="codModif">
+                <option value="01">01 – Precio de venta</option>
+                <option value="02">02 – Descuento o bonificación</option>
+                <option value="03">03 – Devolución de mercancía</option>
+                <option value="04">04 – Cambio de condición de venta</option>
+                <option value="05" selected>05 – Anulación total</option>
+            </select>
+            <div class="form-text" id="codHelp">En anulación total los items se copian automáticamente del documento original.</div>
+        </div>
+        <div class="col-md-4">
+            <label asp-for="Rnc" class="form-label">RNC receptor</label>
+            <input asp-for="Rnc" class="form-control" />
+        </div>
+        <div class="col-md-4">
+            <label asp-for="Cliente" class="form-label">Razón social</label>
+            <input asp-for="Cliente" class="form-control" />
+        </div>
+    </div>
+
+    <h4>Items <small class="text-muted">(opcional en anulación total)</small></h4>
+    <table class="table align-middle" id="tblLineas">
+        <thead>
+            <tr>
+                <th>Descripción</th>
+                <th style="width:100px;">Cantidad</th>
+                <th style="width:120px;">Precio</th>
+                <th style="width:110px;">ITBIS</th>
+                <th class="text-end" style="width:120px;">Subtotal</th>
+                <th style="width:50px;"></th>
+            </tr>
+        </thead>
+        <tbody>
+        @for (int i = 0; i < Model.Lineas.Count; i++)
+        {
+            <tr class="linea">
+                <td><input name="Lineas[@i].Descripcion" value="@Model.Lineas[i].Descripcion" class="form-control form-control-sm" /></td>
+                <td><input name="Lineas[@i].Cantidad" value="@Model.Lineas[i].Cantidad" type="number" step="0.0001" min="0" class="form-control form-control-sm cant" /></td>
+                <td><input name="Lineas[@i].Precio" value="@Model.Lineas[i].Precio" type="number" step="0.01" min="0" class="form-control form-control-sm prec" /></td>
+                <td>
+                    <select name="Lineas[@i].TasaItbis" class="form-select form-select-sm itbis">
+                        <option value="18" selected="@(Model.Lineas[i].TasaItbis == 18)">18%</option>
+                        <option value="16" selected="@(Model.Lineas[i].TasaItbis == 16)">16%</option>
+                        <option value="0" selected="@(Model.Lineas[i].TasaItbis == 0)">Exento</option>
+                    </select>
+                </td>
+                <td class="text-end total-linea">@Model.Lineas[i].Subtotal.ToString("N2")</td>
+                <td><button type="button" class="btn btn-sm btn-outline-danger btn-eliminar-linea">×</button></td>
+            </tr>
+        }
+        </tbody>
+    </table>
+    <button type="button" class="btn btn-sm btn-outline-success mb-3" id="btnAgregarLinea">+ Agregar línea</button>
+
+    <div class="card p-3 mb-3" style="max-width:320px;margin-left:auto;">
+        <div class="d-flex justify-content-between"><span>Subtotal:</span><strong id="lblSubtotal">0.00</strong></div>
+        <div class="d-flex justify-content-between"><span>ITBIS:</span><strong id="lblItbis">0.00</strong></div>
+        <hr />
+        <div class="d-flex justify-content-between fs-5"><span>Total:</span><strong id="lblTotal">0.00</strong></div>
+    </div>
+
+    <div class="d-flex gap-2 flex-wrap">
+        <button type="submit" class="btn btn-danger"
+                onclick="return confirm('¿Emitir nota de crédito y enviar a DGII?');">
+            🔐 Emitir y firmar Nota de Crédito
+        </button>
+        @if (ViewBag.OriginalId != null)
+        {
+            <a asp-action="Details" asp-route-id="@ViewBag.OriginalId" class="btn btn-secondary">Cancelar</a>
+        }
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+        (function () {
+            const tbody = document.querySelector('#tblLineas tbody');
+            const btnAdd = document.getElementById('btnAgregarLinea');
+            const codModif = document.getElementById('codModif');
+            const codHelp = document.getElementById('codHelp');
+
+            function reindexar() {
+                [...tbody.querySelectorAll('tr.linea')].forEach((tr, i) => {
+                    tr.querySelectorAll('input,select').forEach(inp => {
+                        inp.name = inp.name.replace(/Lineas\[\d+\]/, 'Lineas[' + i + ']');
+                    });
+                });
+            }
+            function recalcular() {
+                let s = 0, it = 0;
+                tbody.querySelectorAll('tr.linea').forEach(tr => {
+                    const c = parseFloat(tr.querySelector('.cant').value) || 0;
+                    const p = parseFloat(tr.querySelector('.prec').value) || 0;
+                    const t = parseFloat(tr.querySelector('.itbis').value) || 0;
+                    const st = c * p;
+                    tr.querySelector('.total-linea').textContent = st.toFixed(2);
+                    s += st; it += st * t / 100;
+                });
+                document.getElementById('lblSubtotal').textContent = s.toFixed(2);
+                document.getElementById('lblItbis').textContent = it.toFixed(2);
+                document.getElementById('lblTotal').textContent = (s + it).toFixed(2);
+            }
+
+            btnAdd.addEventListener('click', () => {
+                const idx = tbody.querySelectorAll('tr.linea').length;
+                const tr = document.createElement('tr');
+                tr.className = 'linea';
+                tr.innerHTML =
+                    '<td><input name="Lineas[' + idx + '].Descripcion" class="form-control form-control-sm" /></td>' +
+                    '<td><input name="Lineas[' + idx + '].Cantidad" value="1" type="number" step="0.0001" min="0" class="form-control form-control-sm cant" /></td>' +
+                    '<td><input name="Lineas[' + idx + '].Precio" value="0" type="number" step="0.01" min="0" class="form-control form-control-sm prec" /></td>' +
+                    '<td><select name="Lineas[' + idx + '].TasaItbis" class="form-select form-select-sm itbis">' +
+                        '<option value="18">18%</option><option value="16">16%</option><option value="0">Exento</option>' +
+                    '</select></td>' +
+                    '<td class="text-end total-linea">0.00</td>' +
+                    '<td><button type="button" class="btn btn-sm btn-outline-danger btn-eliminar-linea">×</button></td>';
+                tbody.appendChild(tr);
+                recalcular();
+            });
+
+            document.addEventListener('click', e => {
+                if (e.target.classList.contains('btn-eliminar-linea')) {
+                    e.target.closest('tr').remove();
+                    reindexar(); recalcular();
+                }
+            });
+            document.addEventListener('input', e => {
+                if (e.target.classList.contains('cant') || e.target.classList.contains('prec')) recalcular();
+            });
+            document.addEventListener('change', e => {
+                if (e.target.classList.contains('itbis')) recalcular();
+            });
+
+            codModif.addEventListener('change', () => {
+                if (codModif.value === '05') {
+                    codHelp.innerHTML = 'Anulación total: los items se copian automáticamente del documento original.';
+                } else if (codModif.value === '01') {
+                    codHelp.innerHTML = 'Corrección de precio: indique los items con el precio corregido.';
+                } else if (codModif.value === '02') {
+                    codHelp.innerHTML = 'Descuento/bonificación: indique el descuento a aplicar.';
+                } else if (codModif.value === '03') {
+                    codHelp.innerHTML = 'Devolución de mercancía: indique los items devueltos.';
+                } else if (codModif.value === '04') {
+                    codHelp.innerHTML = 'Cambio de condición de venta (ej: contado ↔ crédito).';
+                }
+            });
+
+            recalcular();
+        })();
+    </script>
+}

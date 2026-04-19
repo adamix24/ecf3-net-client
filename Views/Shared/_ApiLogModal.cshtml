@@ -1,0 +1,73 @@
+@using System.Text.Json
+@{
+    var logJson = TempData["FirmarLog"] as string;
+    List<FacturasWeb.Services.ApiLogEntry>? log = null;
+    if (!string.IsNullOrEmpty(logJson))
+    {
+        try { log = JsonSerializer.Deserialize<List<FacturasWeb.Services.ApiLogEntry>>(logJson); }
+        catch { }
+    }
+}
+
+@if (log != null && log.Count > 0)
+{
+    <div class="mb-3">
+        <button type="button" class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#logModalShared">
+            Ver log del API (@log.Count paso(s))
+        </button>
+    </div>
+    <div class="modal fade" id="logModalShared" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Log del API ECF3 — @log.Count paso(s)</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    @for (int i = 0; i < log.Count; i++)
+                    {
+                        var e = log[i];
+                        string payloadPretty = "", responsePretty = "";
+                        try { if (!string.IsNullOrWhiteSpace(e.RequestPayload ?? e.RequestBody)) { using var d = JsonDocument.Parse(e.RequestPayload ?? e.RequestBody!); payloadPretty = JsonSerializer.Serialize(d.RootElement, new JsonSerializerOptions { WriteIndented = true }); } } catch { payloadPretty = e.RequestPayload ?? e.RequestBody ?? ""; }
+                        try { if (!string.IsNullOrWhiteSpace(e.ResponseBody)) { using var d = JsonDocument.Parse(e.ResponseBody); responsePretty = JsonSerializer.Serialize(d.RootElement, new JsonSerializerOptions { WriteIndented = true }); } } catch { responsePretty = e.ResponseBody ?? ""; }
+                        var ok = e.StatusCode >= 200 && e.StatusCode < 300 && e.Error == null;
+                        <div class="card mb-3 border-@(ok ? "success" : "danger")">
+                            <div class="card-header">
+                                <strong>Paso @(i+1)</strong>
+                                <span class="badge bg-secondary">@e.Method</span>
+                                <span class="badge bg-@(ok ? "success" : "danger")">HTTP @e.StatusCode</span>
+                                <span class="text-muted small">@e.DurationMs ms · @e.Timestamp.ToString("HH:mm:ss.fff")</span>
+                            </div>
+                            <div class="card-body">
+                                <dl class="row mb-2 small">
+                                    <dt class="col-sm-2">URL</dt><dd class="col-sm-10"><code>@e.Url</code></dd>
+                                    <dt class="col-sm-2">Token</dt><dd class="col-sm-10"><code>@e.Token</code></dd>
+                                    @if (!string.IsNullOrEmpty(e.Error))
+                                    {
+                                        <dt class="col-sm-2">Error</dt>
+                                        <dd class="col-sm-10 text-danger">@e.Error</dd>
+                                    }
+                                </dl>
+                                @if (!string.IsNullOrEmpty(payloadPretty))
+                                {
+                                    <div class="mb-2"><strong class="small text-muted">Request:</strong>
+                                        <pre class="bg-light p-2 mb-0 small" style="max-height:300px;overflow:auto;">@payloadPretty</pre>
+                                    </div>
+                                }
+                                @if (!string.IsNullOrEmpty(responsePretty))
+                                {
+                                    <div><strong class="small text-muted">Response:</strong>
+                                        <pre class="bg-light p-2 mb-0 small" style="max-height:300px;overflow:auto;">@responsePretty</pre>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}

@@ -1,0 +1,106 @@
+@model FacturasWeb.Services.GastoRegistrarRequest
+@{
+    ViewData["Title"] = "Registrar gasto";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Registrar gasto</h2>
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">← Volver</a>
+</div>
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<partial name="_ApiLogModal" />
+
+<form asp-action="Registrar" method="post" style="max-width:800px;">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="All" class="text-danger mb-2"></div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-4">
+            <label class="form-label">RNC proveedor *</label>
+            <div class="input-group">
+                <input asp-for="RncEmisor" class="form-control" id="inpRnc" required />
+                <button type="button" class="btn btn-outline-primary" id="btnValidarRnc">Validar</button>
+            </div>
+            <div id="rncFeedback" class="small mt-1"></div>
+        </div>
+        <div class="col-md-8">
+            <label class="form-label">Razón social proveedor</label>
+            <input asp-for="RazonSocialEmisor" class="form-control" id="inpRazon" />
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">NCF recibido</label>
+            <input asp-for="Ncf" class="form-control" placeholder="B0100000001 / E310000000001" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Tipo e-CF</label>
+            <select asp-for="TipoEcf" class="form-select">
+                <option value="">—</option>
+                <option value="31">31 – Crédito Fiscal</option>
+                <option value="32">32 – Consumo</option>
+                <option value="41">41 – Compras</option>
+                <option value="43">43 – Gastos Menores</option>
+                <option value="44">44 – Reg. Especiales</option>
+                <option value="45">45 – Gubernamental</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Fecha emisión</label>
+            <input asp-for="FechaEmision" type="date" class="form-control" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Total *</label>
+            <input asp-for="Total" type="number" step="0.01" min="0.01" class="form-control" required />
+        </div>
+
+        <div class="col-md-12">
+            <label class="form-label">Notas</label>
+            <textarea asp-for="Notas" class="form-control" rows="2"></textarea>
+        </div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Registrar</button>
+        <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function(){
+            const btn = document.getElementById('btnValidarRnc');
+            const inpRnc = document.getElementById('inpRnc');
+            const inpRazon = document.getElementById('inpRazon');
+            const feedback = document.getElementById('rncFeedback');
+            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+            btn.addEventListener('click', async () => {
+                const rnc = (inpRnc.value || '').trim();
+                if (!rnc) { feedback.innerHTML = '<span class="text-danger">Ingrese un RNC</span>'; return; }
+                feedback.innerHTML = '<span class="text-muted">Consultando DGII…</span>';
+                btn.disabled = true;
+                try {
+                    const body = new FormData();
+                    body.append('rnc', rnc);
+                    body.append('__RequestVerificationToken', token);
+                    const r = await fetch('@Url.Action("ValidarRnc", "Facturas")', { method: 'POST', body });
+                    const j = await r.json();
+                    if (j.ok) {
+                        feedback.innerHTML = '<span class="text-success">✔ ' + j.razonSocial + '</span>';
+                        if (!inpRazon.value || !inpRazon.value.trim()) inpRazon.value = j.razonSocial || '';
+                    } else {
+                        feedback.innerHTML = '<span class="text-danger">✖ ' + (j.mensaje || 'No válido') + '</span>';
+                    }
+                } catch (e) {
+                    feedback.innerHTML = '<span class="text-danger">Error: ' + e.message + '</span>';
+                } finally { btn.disabled = false; }
+            });
+        })();
+    </script>
+}

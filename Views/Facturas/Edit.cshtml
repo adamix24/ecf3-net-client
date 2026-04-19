@@ -1,0 +1,252 @@
+@model FacturasWeb.Models.Factura
+@{
+    var esNueva = ViewBag.EsNueva == true;
+    ViewData["Title"] = esNueva ? "Nueva factura" : $"Editar factura {Model.Numero}";
+}
+
+<h2>@ViewData["Title"]</h2>
+
+@if (TempData["Mensaje"] != null)
+{
+    <div class="alert alert-success">@TempData["Mensaje"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<form asp-action="Save" method="post" id="frmFactura">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="RncValidado" id="rncValidado" />
+    <input type="hidden" asp-for="RazonSocialValidada" id="razonSocialValidada" />
+
+    <div asp-validation-summary="All" class="text-danger"></div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-3">
+            <label asp-for="Numero" class="form-label"></label>
+            <input asp-for="Numero" class="form-control" />
+            <span asp-validation-for="Numero" class="text-danger small"></span>
+        </div>
+        <div class="col-md-3">
+            <label asp-for="Fecha" class="form-label"></label>
+            <input asp-for="Fecha" class="form-control" type="date" />
+            <span asp-validation-for="Fecha" class="text-danger small"></span>
+        </div>
+        <div class="col-md-3">
+            <label asp-for="TipoEcf" class="form-label"></label>
+            <select asp-for="TipoEcf" class="form-select">
+                <option value="31">31 – Crédito Fiscal</option>
+                <option value="32">32 – Consumo</option>
+                <option value="33">33 – Nota Débito</option>
+                <option value="34">34 – Nota Crédito</option>
+                <option value="41">41 – Compras</option>
+                <option value="43">43 – Gastos Menores</option>
+                <option value="44">44 – Régimen Especial</option>
+                <option value="45">45 – Gubernamental</option>
+                <option value="46">46 – Exportación</option>
+                <option value="47">47 – Pagos Exterior</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label asp-for="TipoPago" class="form-label"></label>
+            <select asp-for="TipoPago" class="form-select">
+                <option value="1">Contado</option>
+                <option value="2">Crédito</option>
+                <option value="3">Gratuito</option>
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <label asp-for="Rnc" class="form-label"></label>
+            <div class="input-group">
+                <input asp-for="Rnc" class="form-control" id="inpRnc" />
+                <button type="button" class="btn btn-outline-primary" id="btnValidarRnc">Validar</button>
+            </div>
+            <div id="rncFeedback" class="small mt-1">
+                @if (Model.RncValidado)
+                {
+                    <span class="text-success">✔ RNC válido — @Model.RazonSocialValidada</span>
+                }
+            </div>
+        </div>
+        <div class="col-md-9">
+            <label asp-for="Cliente" class="form-label"></label>
+            <input asp-for="Cliente" class="form-control" id="inpCliente" />
+            <span asp-validation-for="Cliente" class="text-danger small"></span>
+        </div>
+
+        <div class="col-md-12">
+            <label asp-for="Direccion" class="form-label"></label>
+            <input asp-for="Direccion" class="form-control" />
+        </div>
+    </div>
+
+    <h4>Líneas</h4>
+    <table class="table align-middle" id="tblLineas">
+        <thead>
+            <tr>
+                <th>Descripción</th>
+                <th style="width:100px;">Cantidad</th>
+                <th style="width:120px;">Precio</th>
+                <th style="width:110px;">ITBIS</th>
+                <th class="text-end" style="width:120px;">Subtotal</th>
+                <th style="width:50px;"></th>
+            </tr>
+        </thead>
+        <tbody>
+        @for (int i = 0; i < Model.Lineas.Count; i++)
+        {
+            <tr class="linea">
+                <td><input name="Lineas[@i].Descripcion" value="@Model.Lineas[i].Descripcion" class="form-control form-control-sm" /></td>
+                <td><input name="Lineas[@i].Cantidad" value="@Model.Lineas[i].Cantidad" type="number" step="0.0001" min="0" class="form-control form-control-sm cant" /></td>
+                <td><input name="Lineas[@i].Precio" value="@Model.Lineas[i].Precio" type="number" step="0.01" min="0" class="form-control form-control-sm prec" /></td>
+                <td>
+                    <select name="Lineas[@i].TasaItbis" class="form-select form-select-sm itbis">
+                        <option value="18" selected="@(Model.Lineas[i].TasaItbis == 18)">18%</option>
+                        <option value="16" selected="@(Model.Lineas[i].TasaItbis == 16)">16%</option>
+                        <option value="0" selected="@(Model.Lineas[i].TasaItbis == 0)">Exento</option>
+                    </select>
+                </td>
+                <td class="text-end total-linea">@Model.Lineas[i].Subtotal.ToString("N2")</td>
+                <td><button type="button" class="btn btn-sm btn-outline-danger btn-eliminar-linea">×</button></td>
+            </tr>
+        }
+        </tbody>
+    </table>
+    <button type="button" class="btn btn-sm btn-outline-success mb-3" id="btnAgregarLinea">+ Agregar línea</button>
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-12">
+            <label asp-for="Notas" class="form-label"></label>
+            <textarea asp-for="Notas" class="form-control" rows="2"></textarea>
+        </div>
+    </div>
+
+    <div class="card p-3 mb-3" style="max-width:320px;margin-left:auto;">
+        <div class="d-flex justify-content-between"><span>Subtotal:</span><strong id="lblSubtotal">0.00</strong></div>
+        <div class="d-flex justify-content-between"><span>ITBIS:</span><strong id="lblItbis">0.00</strong></div>
+        <hr />
+        <div class="d-flex justify-content-between fs-5"><span>Total:</span><strong id="lblTotal">0.00</strong></div>
+    </div>
+
+    <div class="d-flex gap-2 flex-wrap">
+        <button type="submit" class="btn btn-primary">Guardar</button>
+        <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            const tbody = document.querySelector('#tblLineas tbody');
+            const btnAdd = document.getElementById('btnAgregarLinea');
+
+            function reindexar() {
+                [...tbody.querySelectorAll('tr.linea')].forEach((tr, i) => {
+                    tr.querySelectorAll('input,select').forEach(inp => {
+                        inp.name = inp.name.replace(/Lineas\[\d+\]/, 'Lineas[' + i + ']');
+                    });
+                });
+            }
+
+            function recalcular() {
+                let subtotal = 0, itbis = 0;
+                tbody.querySelectorAll('tr.linea').forEach(tr => {
+                    const c = parseFloat(tr.querySelector('.cant').value) || 0;
+                    const p = parseFloat(tr.querySelector('.prec').value) || 0;
+                    const tasa = parseFloat(tr.querySelector('.itbis').value) || 0;
+                    const st = c * p;
+                    const it = st * tasa / 100;
+                    tr.querySelector('.total-linea').textContent = st.toFixed(2);
+                    subtotal += st;
+                    itbis += it;
+                });
+                document.getElementById('lblSubtotal').textContent = subtotal.toFixed(2);
+                document.getElementById('lblItbis').textContent = itbis.toFixed(2);
+                document.getElementById('lblTotal').textContent = (subtotal + itbis).toFixed(2);
+            }
+
+            btnAdd.addEventListener('click', () => {
+                const idx = tbody.querySelectorAll('tr.linea').length;
+                const tr = document.createElement('tr');
+                tr.className = 'linea';
+                tr.innerHTML =
+                    '<td><input name="Lineas[' + idx + '].Descripcion" class="form-control form-control-sm" /></td>' +
+                    '<td><input name="Lineas[' + idx + '].Cantidad" value="1" type="number" step="0.0001" min="0" class="form-control form-control-sm cant" /></td>' +
+                    '<td><input name="Lineas[' + idx + '].Precio" value="0" type="number" step="0.01" min="0" class="form-control form-control-sm prec" /></td>' +
+                    '<td><select name="Lineas[' + idx + '].TasaItbis" class="form-select form-select-sm itbis">' +
+                        '<option value="18">18%</option><option value="16">16%</option><option value="0">Exento</option>' +
+                    '</select></td>' +
+                    '<td class="text-end total-linea">0.00</td>' +
+                    '<td><button type="button" class="btn btn-sm btn-outline-danger btn-eliminar-linea">×</button></td>';
+                tbody.appendChild(tr);
+                recalcular();
+            });
+
+            document.addEventListener('click', e => {
+                if (e.target.classList.contains('btn-eliminar-linea')) {
+                    e.target.closest('tr').remove();
+                    reindexar();
+                    recalcular();
+                }
+            });
+
+            document.addEventListener('input', e => {
+                if (e.target.classList.contains('cant') || e.target.classList.contains('prec')) recalcular();
+            });
+            document.addEventListener('change', e => {
+                if (e.target.classList.contains('itbis')) recalcular();
+            });
+
+            recalcular();
+
+            // Validación RNC AJAX
+            const btnValidarRnc = document.getElementById('btnValidarRnc');
+            const inpRnc = document.getElementById('inpRnc');
+            const inpCliente = document.getElementById('inpCliente');
+            const feedback = document.getElementById('rncFeedback');
+            const hiddenValido = document.getElementById('rncValidado');
+            const hiddenRazon = document.getElementById('razonSocialValidada');
+            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+            inpRnc.addEventListener('input', () => {
+                hiddenValido.value = 'false';
+                hiddenRazon.value = '';
+                feedback.innerHTML = '';
+            });
+
+            btnValidarRnc.addEventListener('click', async () => {
+                const rnc = (inpRnc.value || '').trim();
+                if (!rnc) { feedback.innerHTML = '<span class="text-danger">Ingrese un RNC</span>'; return; }
+                feedback.innerHTML = '<span class="text-muted">Consultando DGII…</span>';
+                btnValidarRnc.disabled = true;
+                try {
+                    const body = new FormData();
+                    body.append('rnc', rnc);
+                    body.append('__RequestVerificationToken', token);
+                    const resp = await fetch('@Url.Action("ValidarRnc", "Facturas")', { method: 'POST', body });
+                    const j = await resp.json();
+                    if (j.ok) {
+                        feedback.innerHTML = '<span class="text-success">✔ ' + j.razonSocial + (j.estado ? ' (' + j.estado + ')' : '') + '</span>';
+                        hiddenValido.value = 'true';
+                        hiddenRazon.value = j.razonSocial || '';
+                        if (inpCliente && (!inpCliente.value || !inpCliente.value.trim())) {
+                            inpCliente.value = j.razonSocial || '';
+                        }
+                    } else {
+                        feedback.innerHTML = '<span class="text-danger">✖ ' + (j.mensaje || 'No válido') + '</span>';
+                        hiddenValido.value = 'false';
+                        hiddenRazon.value = '';
+                    }
+                } catch (err) {
+                    feedback.innerHTML = '<span class="text-danger">Error: ' + err.message + '</span>';
+                } finally {
+                    btnValidarRnc.disabled = false;
+                }
+            });
+        })();
+    </script>
+}
